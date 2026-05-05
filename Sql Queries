@@ -1,0 +1,70 @@
+CREATE INDEX idx_order_date ON sales_data(order_date);
+CREATE INDEX idx_region ON sales_data(region);
+CREATE INDEX idx_category ON sales_data(category);
+
+
+Select * from Sales_data
+
+--NUll Check
+select * from sales_data where sales_data is NULL
+
+--Basic sanity check
+select min(order_date), max(order_date) 
+from sales_data
+
+
+--View analysis
+create view sales_analysis as
+select *,
+DATE_TRUNC('month',order_date) as order_month,
+profit/sales as profit_revenue
+from sales_data
+
+
+--Monthly sales and profit
+select sum(sales) as monthly_revenue,sum(profit) as monthly_profit,
+DATE_TRUNC('month',order_date) as month
+from sales_data
+group by DATE_TRUNC('month',order_date)
+order by month asc
+
+
+--Mom growth
+with current_month as(
+select sum(sales) as total_sales,
+DATE_TRUNC ('month',order_date) as month
+from sales_data
+group by month
+order by month
+),
+Prev_month_sales as (
+select lag(total_sales) over(order by month) as prev_sales,
+month,total_sales
+from current_month
+group by month,total_sales
+)
+select *,
+(total_sales - prev_sales)/prev_sales as MoM_growth
+from Prev_month_sales
+
+--Region analysis
+select region, sum(sales), sum(profit)
+from sales_data
+group by region
+
+--Product_analysis
+select product_name, sum(sales) as revenue, sum(profit) as profit
+from sales_data
+group by product_name
+
+--discount impact
+select discount,
+avg(sales) as avg_sales,avg(profit) as avg_profit
+from sales_data
+group by discount 
+
+--loss making prodcuts
+select sum(profit) as loss_making_products,product_name
+from sales_data
+group by product_name
+having sum(profit) < 0
